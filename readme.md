@@ -3,7 +3,7 @@
 ## **Overview**
 
 This project develops a fall-detection system using **inertial data collected from two ESP32-S3 devices** worn simultaneously on the **foot** and **wrist**.
-A fully custom dataset was recorded in controlled conditions, processed in Edge Impulse, and used to train a TinyML model based on **spectral features + dense neural networks**.
+A fully custom dataset was recorded in controlled conditions, processed in Edge Impulse, and used to train a TinyML model based on spectral features and dense neural networks.
 The goal is to evaluate whether real-time fall detection is feasible from these sensor locations and to compare performance between them.
 
 # **1. Custom Dataset Creation**
@@ -13,163 +13,147 @@ The goal is to evaluate whether real-time fall detection is feasible from these 
 Two ESP32-S3 devices were equipped with:
 
 * 3-axis accelerometer
-* 3-axis gyroscope (discarded later due to saturation issues)
+* 3-axis gyroscope (later discarded due to saturation issues)
 * Custom 3D-printed enclosure for impact protection
 * BLE streaming system (device → Python receiver → CSV)
 
-Sensors were placed at:
+Sensors were worn on:
 
 * **Foot** (smart-insole prototype location)
-* **Wrist** (baseline comparison point widely used in wearables)
+* **Wrist** (baseline comparison used in commercial wearables)
 
-Data collection was performed on a **tatami floor** at the University of Zaragoza sports facility to ensure safety.
+Experiments were conducted on a **tatami floor** at the University of Zaragoza to ensure safe fall simulation.
 
 ## **1.2 Participants**
 
 * **13 volunteers**
-* Physical characteristics recorded (age, height, weight, gender)
-* Each participant performed a fixed protocol with identical timings
+* Different physical characteristics (age, weight, height, gender)
+
+Each participant followed the exact same structured protocol.
 
 ## **1.3 Recorded Activities**
 
-The protocol contains **33 activities**, divided into:
+The protocol includes **33 activities**:
 
-### **ADLs (17 activities, 43 repetitions, ~10 minutes per participant)**
+### **ADLs (17 activities, ~10 minutes per participant)**
 
-Examples:
+Walking, stair climbing, sitting/standing transitions, jogging, jumping, stumbling, picking up objects…
 
-* Slow/fast walking
-* Stair climbing (slow/fast)
-* Sitting and standing transitions
-* Jumping, stumbling, picking up objects
-* Agacharse, small obstacle avoidance steps
+### **Falls (16 activities, ~8.5 minutes per participant)**
 
-### **Falls (16 activities, 52 repetitions, ~8.5 minutes per participant)**
-
-Including:
-
-* Forward, backward, lateral falls
-* Falls from walking, trotting, sitting, or standing
-* Falls caused by simulated slips, trips, loss of balance
-* Desmayo-type vertical collapses
+Forward, backward, and lateral falls, falls while walking or sitting, simulated slips, trips, fainting-like vertical collapses, etc.
 
 ## **1.4 Dataset Size**
 
-Across all participants:
+Across all sessions:
 
-* **1,235 total repetitions**
-* **approx. 481 minutes of data recorded**
-* **2,470 CSV files** (foot + wrist)
-* ADLs produce more windows than falls due to longer duration
+* **1,235 repetitions**
+* **≈481 minutes recorded**
+* **2,470 CSV files**
+* ADLs dominate in number of windows due to their longer duration
 
-All data was synchronized, validated via sequence counters, and exported in timestamped CSV format.
+All data was validated using sequence counters, timestamps, and connection monitoring.
 
 # **2. Edge Impulse Pipeline**
 
-The same ML pipeline was applied independently to the wrist and foot datasets.
+## **2.1 Windowing & Segmentation**
 
-## **2.1 Windowing Strategy**
+To automate processing of thousands of files, the system uses **large sliding windows** covering the entire duration of a fall event.
 
-The system uses sliding windows designed to cover the full duration of a fall event:
+### **Note on ideal segmentation**
 
-* **Window Size:** large enough to contain the entire fall episode without fragmentation
-* **Rationale:** falls are short (2–3s), but segmenting them manually is impractical without video annotations; therefore long automatic windows are acceptable and avoid mislabeling transitions
-* **Moderate overlap** ensures no fall is split across boundaries
+Ideally, each fall would be **manually trimmed to its exact duration** (typically 2–3 seconds).
+However, this requires:
+
+* synchronized video recordings,
+* manual review frame by frame,
+* and per-window re-labeling.
+
+Because of the time and resource constraints—and because the model already behaved reliably with automatic windows—this manual segmentation was **not feasible**.
+Instead, long windows (with moderate overlap) preserved entire fall episodes without splitting them, avoiding mislabeled transitions.
 
 ## **2.2 Feature Extraction**
 
-A **Spectral Features** block is used:
+A **Spectral Features** block was employed:
 
-* **FFT length:** 64
-* Provides sufficient frequency resolution to characterize abrupt, high-energy impulses typical of falls
-* Computationally light enough for embedded execution
+* **FFT length = 64**
+* Balanced spectral resolution and embedded efficiency
 
-Gyroscope data was **excluded**:
+### **Gyroscope exclusion**
 
-* Manufacturer default settings produced angular-rate saturation during impacts (flat-topped traces)
-* These saturated signals degraded model learning
-* Only accelerometer channels were retained to ensure data reliability
+During early sessions, gyroscope readings showed **saturation and flat-topped plateaus** caused by:
+
+* The default Waveshare configuration for angular-rate range
+* High angular velocities during impact not fitting the configured range
+
+This saturation corrupted the temporal shape of impacts, degrading model learning.
+
+**Therefore, gyroscope data was excluded** and only accelerometer channels were used for detection.
 
 ## **2.3 Model Architecture**
 
-A **Dense Neural Network (DNN)** with 3 layers:
+Dense neural network:
 
-* **64 neurons** (high-resolution spectral representation)
-* **32 neurons** (mid-resolution aggregation)
-* **16 neurons** (general class-level interpretation)
-* **Softmax output** (FALL / ADL)
+* 64 → 32 → 16 neurons
+* 50 epochs
+* Normalization enabled
+* Class weighting enabled to counter ADL dominance
+* Post-training **int8 quantization** for ESP32-S3 deployment
 
-Training:
+## **2.4 Validation Strategy**
 
-* **50 epochs**
-* **Class weighting enabled** (addresses dominance of ADL windows)
-* **Feature normalization enabled** (reduces inter-subject scaling differences)
-* **Quantization to int8** for deployment efficiency
+A **leave-one-subject-out** approach:
 
-## **2.4 Class Balancing**
-
-Although falls and ADLs have similar *counts*, ADLs last longer and generate **far more windows**.
-To avoid bias toward ADLs:
-
-* **Class weighting** was activated
-* Result: substantial reduction in fall false-negatives
-* Trade-off: slightly more false positives acceptable in a safety-critical system
-
-## **2.5 Validation Strategy**
-
-A **leave-one-subject-out** validation approach was used:
-
-* For each run, one participant was **completely excluded** from training
-* That participant served as the **test subject**
-* Prevents temporal leakage between training/testing
-* Accurately simulates real deployment (new unseen users)
-
-This approach significantly increases reliability compared to random window-shuffling.
+* One participant excluded entirely from training
+* Used only as test subject
+* Ensures generalization to unseen users
+* Prevents window overlap leakage
 
 # **3. Results**
 
-## **3.1 Wrist Placement**
+## **3.1 Wrist**
 
-* **Accuracy:** ~98.6 %
-* **Weighted Precision / Recall / F1:** ≈ 0.99
-* **Recall for FALL:** ~100 %
-* **Behavior:** No falls missed; a small fraction of ADLs misclassified as FALL
-* Indicates high sensitivity and excellent generalization to unseen participants
+* **Accuracy:** ~98.6%
+* **Weighted F1:** ~0.99
+* **Recall (FALL):** ~100%
+* No missed falls; minimal ADL confusion
 
-## **3.2 Foot Placement**
+## **3.2 Foot**
 
-* **Accuracy:** ~96.5 %
-* **Weighted metrics:** 0.96–0.97
-* **Recall for FALL:** ~94 %
-* A small number of falls were misclassified as ADLs
-* Still strong performance, confirming viability of a smart-insole system
+* **Accuracy:** ~96.5%
+* **Weighted F1:** 0.96–0.97
+* **Recall (FALL):** ~94%
+* Small number of falls misclassified as ADLs
 
-## **3.3 Comparative Interpretation**
+## **3.3 Interpretation**
 
-* Both locations achieve **high real-world feasibility**
-* Wrist: slightly superior due to higher signal amplitude and variability
-* Foot: slightly more confusion in transitions, but ideal for wearable integration
+* Both placements feasible
+* Wrist shows slightly higher sensitivity
+* Foot remains attractive for smart-insoles and daily comfort
+* Differences are not large enough to discard either location
 
 # **4. Discussion**
 
-### **Key insights**
+### **Main takeaways**
 
-* Long windows are crucial for robust fall detection
-* FFT=64 provides ideal balance of detail and computational cost
-* Gyroscope removal improved overall consistency
-* Normalization + class weighting = large improvement in fall sensitivity
-* Subject-wise validation is mandatory to evaluate generalization
+* Long windows prevent fragmentation of fall events
+* FFT=64 is an appropriate trade-off for resolution and cost
+* Gyroscope exclusion improved robustness
+* Normalization and class weighting significantly boosted fall detection
+* Subject-wise validation is essential for realistic evaluation
 
-### **Safety considerations**
+### **Safety priority**
 
-In fall detection, **recall for FALL** is the primary metric.
-Both models maintain high recall, with the wrist achieving near-perfect performance.
+In fall detection, **recall for FALL** is the most important metric.
+Both models excel, especially the wrist placement.
 
 # **5. Conclusion**
 
-This project demonstrates that:
+A custom fall dataset collected using ESP32-S3 devices is sufficient to train **high-performance TinyML models** in Edge Impulse.
+Using spectral features and a 3-layer dense network, models achieved:
 
-* A fully custom dataset collected with ESP32-S3 devices is **sufficiently rich** to train reliable fall detectors.
-* Edge Impulse’s spectral + dense neural network pipeline can achieve **96–99 % accuracy**, depending on sensor location.
-* Both wrist and foot placements are viable for real-world deployment.
-* The final pipeline is efficient enough for **TinyML deployment on ESP32-S3**.
+* **~99% accuracy** (wrist)
+* **~96% accuracy** (foot)
+* High recall for fall events in both locations
+
+Both configurations are viable for real-world deployment, with the choice driven by ergonomics and product design requirements.
