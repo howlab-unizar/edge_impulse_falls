@@ -111,7 +111,7 @@ The full pipelines (dataset, impulse design, and trained models) are publicly av
 
 ---
 
-# **3. On-Device Implementation (ESP32_S3 V5)**
+# **3. On-Device Implementation**
 
 Once trained, the Edge Impulse models were deployed as a **C++ library** on an ESP32-S3 with a **QMI8658 IMU**.
 The firmware is the same for both locations (wrist/foot), changing only the embedded model.
