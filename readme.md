@@ -6,6 +6,8 @@ This project develops a fall-detection system using **inertial data collected fr
 A fully custom dataset was recorded in controlled conditions, processed in Edge Impulse, and used to train a TinyML model based on spectral features and dense neural networks.
 The goal is to evaluate whether real-time fall detection is feasible from these sensor locations and to compare performance between them.
 
+---
+
 # **1. Custom Dataset Creation**
 
 ## **1.1 Experimental Setup**
@@ -54,22 +56,16 @@ Across all sessions:
 
 All data was validated using sequence counters, timestamps, and connection monitoring.
 
+---
+
 # **2. Edge Impulse Pipeline**
 
 ## **2.1 Windowing & Segmentation**
 
 To automate processing of thousands of files, the system uses **large sliding windows** covering the entire duration of a fall event.
 
-### **Note on ideal segmentation**
-
-Ideally, each fall would be **manually trimmed to its exact duration** (typically 2–3 seconds).
-However, this requires:
-
-* synchronized video recordings,
-* manual review frame by frame,
-* and per-window re-labeling.
-
-Because of the time and resource constraints—and because the model already behaved reliably with automatic windows—this manual segmentation was **not feasible**.
+Ideally, each fall would be **manually trimmed to its exact duration** (2–3 seconds), but this would require synchronized video, frame-by-frame review and re-labelling.
+Due to time and resource constraints—and because the model already behaved reliably—this manual segmentation was not feasible.
 Instead, long windows (with moderate overlap) preserved entire fall episodes without splitting them, avoiding mislabeled transitions.
 
 ## **2.2 Feature Extraction**
@@ -81,14 +77,8 @@ A **Spectral Features** block was employed:
 
 ### **Gyroscope exclusion**
 
-During early sessions, gyroscope readings showed **saturation and flat-topped plateaus** caused by:
-
-* The default Waveshare configuration for angular-rate range
-* High angular velocities during impact not fitting the configured range
-
-This saturation corrupted the temporal shape of impacts, degrading model learning.
-
-**Therefore, gyroscope data was excluded** and only accelerometer channels were used for detection.
+During early sessions, gyroscope readings showed **saturation and flat-topped plateaus** due to the default angular-rate range and high impact velocities.
+This corrupted impact shape and degraded learning, so **gyroscope data was excluded**, using only accelerometer channels for detection.
 
 ## **2.3 Model Architecture**
 
@@ -109,45 +99,101 @@ A **leave-one-subject-out** approach:
 * Ensures generalization to unseen users
 * Prevents window overlap leakage
 
-# **3. Results**
+## **2.5 Edge Impulse Projects**
 
-## **3.1 Wrist**
+The full pipelines (dataset, impulse design, and trained models) are publicly available in Edge Impulse:
+
+* **Wrist project:**
+  [https://studio.edgeimpulse.com/studio/788227](https://studio.edgeimpulse.com/studio/788227)
+
+* **Foot project:**
+  [https://studio.edgeimpulse.com/studio/788229](https://studio.edgeimpulse.com/studio/788229)
+
+---
+
+# **3. On-Device Implementation (ESP32_S3 V5)**
+
+Once trained, the Edge Impulse models were deployed as a **C++ library** on an ESP32-S3 with a **QMI8658 IMU**.
+The firmware is the same for both locations (wrist/foot), changing only the embedded model.
+
+### **3.1 Sampling and Inference**
+
+* The accelerometer is sampled at **`EI_CLASSIFIER_FREQUENCY` Hz**, limited to **±4 g** and converted to **m/s²**.
+* A sliding window of **497 samples × 3 axes** feeds the Edge Impulse classifier (`FallDetection_Wrist` / foot variant).
+* Inference is **adaptive**:
+
+  * In normal conditions, the model runs roughly every `WINDOW/8` samples.
+  * When a potential event is armed, it switches to denser windows (`WINDOW/10`) for faster decisions.
+
+### **3.2 Fall Probability and State Machine**
+
+* Each inference returns a **fall probability** `p(FALL)`.
+
+* A simple **exponential moving average** is maintained:
+
+  `fall_ema = 0.25·p + 0.75·fall_ema`
+
+* A compact state machine processes `p` and `fall_ema`:
+
+  * **Idle** → arms an episode when `p ≥ 0.95` and `fall_ema ≥ 0.90`.
+  * **AwaitHold** → in the next windows, requires consistent evidence (e.g. ≥2/3 windows with `fall_ema ≥ 0.70`) or cancels and returns to Idle.
+  * **AwaitLow** → checks post-impact behavior:
+
+    * Confirms a fall if several windows show **low probability** and **low acceleration variability** (impact + quietness).
+    * If probability remains very high without quietness, it triggers a **“Need help?”** prompt instead.
+  * **AwaitHelp** → handles the touchscreen prompt (YES/NO or auto-YES after a short timeout) and applies a **refractory period (~15 s)** to avoid repeated alarms.
+
+### **3.3 Alerts and Telemetry**
+
+* Confirmed events turn the screen **red** and optionally activate vibration.
+* The device can **stream probabilities, EMA and state information via BLE notifications**, allowing external dashboards to monitor the detector in real time.
+
+---
+
+# **4. Results**
+
+## **4.1 Wrist**
 
 * **Accuracy:** ~98.6%
 * **Weighted F1:** ~0.99
 * **Recall (FALL):** ~100%
-* No missed falls; minimal ADL confusion
+* No missed falls; minimal ADL confusion.
 
-## **3.2 Foot**
+## **4.2 Foot**
 
 * **Accuracy:** ~96.5%
 * **Weighted F1:** 0.96–0.97
 * **Recall (FALL):** ~94%
-* Small number of falls misclassified as ADLs
+* Small number of falls misclassified as ADLs.
 
-## **3.3 Interpretation**
+## **4.3 Interpretation**
 
-* Both placements feasible
-* Wrist shows slightly higher sensitivity
-* Foot remains attractive for smart-insoles and daily comfort
-* Differences are not large enough to discard either location
+* Both placements are **feasible** for real-time fall detection.
+* The **wrist** shows slightly higher sensitivity and fewer missed falls.
+* The **foot** remains attractive for smart-insoles, rehabilitation and daily comfort use-cases.
+* Differences are not large enough to discard either location; choice can be driven by **ergonomics and clinical context**.
 
-# **4. Discussion**
+---
+
+# **5. Discussion**
 
 ### **Main takeaways**
 
-* Long windows prevent fragmentation of fall events
-* FFT=64 is an appropriate trade-off for resolution and cost
-* Gyroscope exclusion improved robustness
-* Normalization and class weighting significantly boosted fall detection
-* Subject-wise validation is essential for realistic evaluation
+* Long windows prevent fragmentation of fall events.
+* FFT = 64 is an appropriate trade-off for resolution and computational cost.
+* Excluding gyroscope channels improved robustness due to saturation artefacts.
+* Normalization and class weighting significantly boosted fall detection performance.
+* Subject-wise validation is essential for realistic evaluation of generalization.
+* The on-device state machine plus EMA converts raw model predictions into a **practical alert logic**.
 
 ### **Safety priority**
 
 In fall detection, **recall for FALL** is the most important metric.
-Both models excel, especially the wrist placement.
+Both models excel, especially the wrist placement, and the firmware is biased towards **avoiding missed falls**, while keeping false alarms manageable through thresholds, post-impact checks and user confirmation.
 
-# **5. Conclusion**
+---
+
+# **6. Conclusion**
 
 A custom fall dataset collected using ESP32-S3 devices is sufficient to train **high-performance TinyML models** in Edge Impulse.
 Using spectral features and a 3-layer dense network, models achieved:
@@ -156,4 +202,10 @@ Using spectral features and a 3-layer dense network, models achieved:
 * **~96% accuracy** (foot)
 * High recall for fall events in both locations
 
-Both configurations are viable for real-world deployment, with the choice driven by ergonomics and product design requirements.
+The combination of:
+
+* a robust Edge Impulse pipeline,
+* an adaptive inference schedule, and
+* a lightweight on-device state machine with EMA and touchscreen prompts
+
+shows that **real-time fall detection on low-power microcontrollers is feasible and practical** for wearable and smart insole applications.
