@@ -47,9 +47,11 @@ Each wearable includes:
 To compare **wrist** vs **foot** detection performance.
 
 **Wrist device**
+
 ![Wrist device.](docs/ESP32_Wrist.jpg)
 
 **Foot device**
+
 ![Foot device.](docs/ESP32_Foot.jpg)
 
 ---
@@ -88,9 +90,11 @@ Rough stats:
 | Minimum      | 19          | 163         | 52          |
 
 **Dataset's CSV file**
+
 ![Dataset's CSV file.](docs/CSV_screenshot.png)
 
 **Data collection workflow**
+
 ![Data Collection Workflow.](docs/ESP32toEdgeImpulse.png)
 
 ---
@@ -130,6 +134,7 @@ Using relatively long windows guarantees that each fall window contains the **fu
 > During early experiments the gyroscope suffered from a configuration issue that produced **systematic saturation during impacts**, generating flat-topped plateaus in the angular-velocity signals. These artefacts degraded model performance and made gyroscope readings less trustworthy, so the final pipeline focuses on the accelerometer, which remained stable and sufficient to separate falls from ADLs.
 
 **Gyroscope saturation example**
+
 ![Gyroscope saturation.](docs/GYR_saturation.png)
 
 ---
@@ -158,6 +163,7 @@ This block converts each accelerometer axis into a compact representation of its
 This design keeps the pipeline simple: **one well-understood feature block + one small dense network**.
 
 **Spectral Features – configuration screenshot:**
+
 ![Spectral features configuration in Edge Impulse](docs/SpectralFeatures.png)
 
 ---
@@ -173,6 +179,7 @@ On top of the spectral features we use a **fully connected neural network** with
 * **Output layer:** Dense(2), activation **Softmax** → classes `{ADL, FALL}`.
 
 **Classifier – configuration screenshot:**
+
 ![Dense NN architecture – input features → 64 → 32 → 16 → softmax(2)](docs/NeuralNetwork.png)
 
 **Why this architecture and not something larger or more complex?**
