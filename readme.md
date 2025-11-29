@@ -23,6 +23,11 @@ This project builds a **complete fall-detection system** using:
 
 Everything runs **fully on-device**, no cloud required.
 
+**ESP32**
+![Devices setup.](docs/ESP32_FRONT.jpg)
+![Devices setup.](docs/ESP32_back.jpg)
+
+
 ---
 
 ## **Hardware Setup**
