@@ -90,6 +90,9 @@ Rough stats:
 **Dataset's CSV file**
 ![Dataset's CSV file.](docs/CSV_screenshot.png)
 
+**Data collection workflow**
+![Data Collection Workflow.](docs/ESP32toEdgeImpulse.png)
+
 ---
 
 ## **How the model was built**
@@ -102,8 +105,7 @@ Rough stats:
 4. Train a **small Dense Neural Network**
 5. Export the **C++ library** for ESP32-S3
 
-**Data collection workflow**
-![Data Collection Workflow.](docs/ESP32toEdgeImpulse.png)
+
 
 ### **Why this works well**
 
