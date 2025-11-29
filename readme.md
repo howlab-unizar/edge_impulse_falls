@@ -23,7 +23,8 @@ This project builds a **complete fall-detection system** using:
 
 Everything runs **fully on-device**, no cloud required.
 
-**ESP32**
+**ESP32-S3-Touch-LCD-1.69**
+* Link: [https://www.waveshare.com/wiki/ESP32-S3-LCD-1.69](https://www.waveshare.com/wiki/ESP32-S3-LCD-1.69)
 ![Devices setup.](docs/ESP32_FRONT.jpg)
 ![Devices setup.](docs/ESP32_back.jpg)
 
