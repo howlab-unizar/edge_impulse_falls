@@ -2,7 +2,7 @@
 
 *A practical, fully working wearable built with two custom devices (wrist + foot).*
 
-![Dataset collection video (tatami setup).](docs/VID20250917182731-ezgif.com-video-to-gif-converter.gif)
+![Dataset collection video (tatami setup).](docs/VID20250909170215-ezgif.com-crop.gif)
 
 
 ## **Edge Impulse project links**
