@@ -413,10 +413,10 @@ At the end of the clip, I simulate a **controlled fall on a matress**, and the d
 
 [![Detection demo](docs/FallVideoThumbnailEdit.gif)](https://unizares-my.sharepoint.com/:v:/g/personal/822018_unizar_es/ETE9cXVVWytIuF3OWkDMDlkBq5lF2cOrpcbJai9p8g5TBA?e=Sftse4)
 
-*Click on the thumbnail to watch the full video.*
+*Click on the thumbnail to watch the full video online.*
 
 Or download the video here:
-[▶️ Download detection video (MP4)](https://raw.githubusercontent.com/PabloSanzG/edge_impulse_falls/main/docs/FallDetectionDemo.mp4)
+[▶️ Download detection video (MP4)]((https://raw.githubusercontent.com/PabloSanzG/edge_impulse_falls/main/docs/FallDetectionDemo.mp4))
 
 ---
 
