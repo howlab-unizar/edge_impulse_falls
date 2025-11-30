@@ -426,7 +426,6 @@ git clone https://github.com/howlab-unizar/edge_impulse_falls
 cd edge_impulse_falls
 ```
 
----
 
 ### **2. Install the correct Edge Impulse libraries**
 
@@ -449,7 +448,6 @@ Sketch → Include Library → Add .ZIP Library…
 **PlatformIO:**
 Place the ZIP contents inside your project’s `/lib` directory.
 
----
 
 ### **3. Choose the firmware**
 
@@ -462,7 +460,6 @@ Each one is preconfigured for its corresponding Edge Impulse model and tuned thr
 
 Open the folder you want to use in your IDE and follow the steps described in the header of each `.ino` file.
 
----
 
 ### **4. Flash the ESP32-S3**
 
@@ -472,7 +469,6 @@ Once the library is installed and the firmware folder opened:
 * Configure the correct serial port
 * Flash the program normally (Upload)
 
----
 
 ### **5. Run the detector**
 
