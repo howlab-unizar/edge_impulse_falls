@@ -411,8 +411,7 @@ At the end of the clip, I simulate a **controlled fall on a matress**, and the d
 
 
 
-[![Detection demo](docs/FallVideoThumbnail.png)](FallDetection.mp4)
-
+[![Detection demo](docs/FallVideoThumbnail.png)](https://unizares-my.sharepoint.com/:v:/g/personal/822018_unizar_es/ETE9cXVVWytIuF3OWkDMDlkBq5lF2cOrpcbJai9p8g5TBA?e=Sftse4)
 *Click on the thumbnail to watch the full video.*
 
 
