@@ -403,6 +403,15 @@ For debugging and future integration, the ESP32-S3 also sends **BLE notification
 
 This telemetry makes it easy to visualize how the detector behaves over time and to tune thresholds for other use cases or body locations.
 
+### 📹 Demonstration video – On-device detection in action
+
+Below is a short demonstration showing the real behaviour of the ESP32-S3 detector.  
+First, I perform several **normal daily movements** (walking, turning, walking upstairs…) and the detector remains in the *green state*.  
+At the end of the clip, I simulate a **controlled fall on a matress**, and the device correctly triggers the **red alert screen**.
+
+![Detection demo video](FallDetection.mp4)
+
+
 ---
 
 ## **Try It Yourself (quick start)**
