@@ -417,28 +417,70 @@ At the end of the clip, I simulate a **controlled fall on a matress**, and the d
 
 ---
 
-## **Try It Yourself (quick start)**
+##**Try It Yourself (quick start)**
 
-### **1. Clone the repo**
+### **1. Clone the repository**
 
-```
+```bash
 git clone https://github.com/howlab-unizar/edge_impulse_falls
 cd edge_impulse_falls
 ```
 
-### **2. Flash the firmware**
+---
 
-* Install PlatformIO or Arduino
-* Export your EI model as an Arduino library
-* Drop it into `/lib/`
-* Flash to ESP32-S3
+### **2. Install the correct Edge Impulse libraries**
 
-### **3. Run the detector**
+The project provides **two pre-exported Arduino libraries**, one for each placement:
 
-* Strap device on wrist or foot
-* Power on
-* Move normally → detector stays green
-* Simulate falls on padding → detector triggers red screen
+* **Wrist model:**
+  `ei-falldetection_wrist-arduino-1.0.4.zip`
+
+* **Foot model:**
+  `ei-falldetection_foot-arduino-1.0.2.zip`
+
+Download the one you want to test and install it in your Arduino/PlatformIO environment:
+
+**Arduino IDE:**
+
+```
+Sketch → Include Library → Add .ZIP Library…
+```
+
+**PlatformIO:**
+Place the ZIP contents inside your project’s `/lib` directory.
+
+---
+
+### **3. Choose the firmware**
+
+This repository includes two separate firmware folders:
+
+* `ESP32_FALL_DETECTION_WRIST`
+* `ESP32_FALL_DETECTION_FOOT`
+
+Each one is preconfigured for its corresponding Edge Impulse model and tuned thresholds (EMA, quietness, refractory time…).
+
+Open the folder you want to use in your IDE and follow the steps described in the header of each `.ino` file.
+
+---
+
+### **4. Flash the ESP32-S3**
+
+Once the library is installed and the firmware folder opened:
+
+* Select *ESP32-S3 DevKit* as the board
+* Configure the correct serial port
+* Flash the program normally (Upload)
+
+---
+
+### **5. Run the detector**
+
+* Strap the device on the **wrist** or **foot** depending on the firmware used
+* Power it on
+* Move normally → No fall detected
+* Perform a safe, controlled fall on padding → the screen switches to **red alert**
+* Press **YES/NO** on the touchscreen to acknowledge the event
 
 ---
 
